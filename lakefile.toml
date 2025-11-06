@@ -1,0 +1,6 @@
+name = "IParsec"
+version = "0.1.0"
+defaultTargets = ["IParsec"]
+
+[[lean_lib]]
+name = "IParsec"
