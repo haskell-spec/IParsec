@@ -35,6 +35,12 @@ inductive Reply (a : Type) : Type where
 structure Parsec (a : Type) : Type where
   run : (State → Consumed (Reply a))
 
+/--
+Modify the state the parser is run in.
+-/
+def modifyState {a : Type}(f : State → State)(p : Parsec a) : Parsec a :=
+  Parsec.mk (λ s => p.run (f s))
+
 def parsec_bind {a b : Type} :
    Parsec a →
    (a -> Parsec b) →
@@ -52,6 +58,22 @@ instance parsecMonad : Monad Parsec where
   pure := λ x => Parsec.mk (λ s => Consumed.Empty (Reply.Ok x s))
   bind := parsec_bind
 
+/--
+Sets the indentation relation for the next token.
+Corresponds to `p^rel` in the paper.
+-/
+def localIndentation {a : Type}(rel : IndentationRel)(p : Parsec a) : Parsec a := sorry
+
+/--
+Corresponds to `|p|` in the paper.
+-/
+def absoluteIndentation {a : Type}(p : Parsec a) : Parsec a := sorry
+
+/--
+Sets the default indentation mode that is applied to all tokens to the given indentation relation.
+-/
+def localTokenMode {a : Type}(rel : IndentationRel)(p : Parsec a) : Parsec a :=
+  modifyState (λ ⟨input, indents⟩ => State.mk input {indents with  rel := rel }) p
 
 def charP (c : Char) : Parsec Unit :=
   Parsec.mk (λ s => match s.input.toList with
