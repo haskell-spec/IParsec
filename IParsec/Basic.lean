@@ -118,12 +118,25 @@ def ors{α : Type}(ps : List (Parsec α)) : Parsec α :=
   List.foldr or fail ps
 
 
+partial def many{α : Type}(p : Parsec α) : Parsec (List α) :=
+  let f : Parsec (List α) := do
+    let x ← p
+    let xs ← many p
+    pure (x :: xs)
+  or f (pure [])
+
+def many1{α : Type}(p : Parsec α) : Parsec (List α) := do
+  let x ← p
+  let xs ← many p
+  pure (x :: xs)
+
 def aab_parser : Parsec Unit := do
   charP 'a'
   charP 'a'
   charP 'b'
 
 def a_or_b_parser : Parsec Unit := or (backtrack (charP 'a')) (charP 'b')
+
 
 #guard parse "" (charP 'a') == none
 #guard parse "a" (charP 'a') == some Unit.unit
@@ -132,3 +145,7 @@ def a_or_b_parser : Parsec Unit := or (backtrack (charP 'a')) (charP 'b')
 #guard parse "bba" aab_parser == none
 #guard parse "a" a_or_b_parser == some Unit.unit
 #guard parse "b" a_or_b_parser == some Unit.unit
+#guard parse "" (many (charP 'a')) == some []
+#guard parse "aa" (many (charP 'a')) == some [Unit.unit, Unit.unit]
+#guard parse "" (many1 (charP 'a')) == none
+#guard parse "aa" (many1 (charP 'a')) == some [Unit.unit, Unit.unit]
