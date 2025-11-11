@@ -24,27 +24,27 @@ structure State  : Type  where
   input : String
   indent : IndentationState
 
-inductive Consumed (a : Type) : Type where
-  | Consumed : a → Consumed a
-  | Empty : a → Consumed a
+inductive Consumed (α : Type) : Type where
+  | Consumed : α → Consumed α
+  | Empty : α → Consumed α
 
-inductive Reply (a : Type) : Type where
-  | Ok : a → State → Reply a
-  | Error : ParseError → Reply a
+inductive Reply (α : Type) : Type where
+  | Ok : α → State → Reply α
+  | Error : ParseError → Reply α
 
-structure Parsec (a : Type) : Type where
-  run : (State → Consumed (Reply a))
+structure Parsec (α : Type) : Type where
+  run : (State → Consumed (Reply α))
 
 /--
 Modify the state the parser is run in.
 -/
-def modifyState {a : Type}(f : State → State)(p : Parsec a) : Parsec a :=
+def modifyState {α : Type}(f : State → State)(p : Parsec α) : Parsec α :=
   Parsec.mk (λ s => p.run (f s))
 
-def parsec_bind {a b : Type} :
-   Parsec a →
-   (a -> Parsec b) →
-   Parsec b :=
+def parsec_bind {α β : Type} :
+   Parsec α →
+   (α -> Parsec β) →
+   Parsec β :=
    open Reply in
    λ ma f => Parsec.mk (λ s =>
      match ma.run s with
@@ -62,17 +62,17 @@ instance parsecMonad : Monad Parsec where
 Sets the indentation relation for the next token.
 Corresponds to `p^rel` in the paper.
 -/
-def localIndentation {a : Type}(rel : IndentationRel)(p : Parsec a) : Parsec a := sorry
+def localIndentation {α : Type}(rel : IndentationRel)(p : Parsec α) : Parsec α := sorry
 
 /--
 Corresponds to `|p|` in the paper.
 -/
-def absoluteIndentation {a : Type}(p : Parsec a) : Parsec a := sorry
+def absoluteIndentation {α : Type}(p : Parsec α) : Parsec α := sorry
 
 /--
 Sets the default indentation mode that is applied to all tokens to the given indentation relation.
 -/
-def localTokenMode {a : Type}(rel : IndentationRel)(p : Parsec a) : Parsec a :=
+def localTokenMode {α : Type}(rel : IndentationRel)(p : Parsec α) : Parsec α :=
   modifyState (λ ⟨input, indents⟩ => State.mk input {indents with  rel := rel }) p
 
 def charP (c : Char) : Parsec Unit :=
@@ -84,12 +84,29 @@ def charP (c : Char) : Parsec Unit :=
                     )
 
 
-def parse (input : String) (parser : Parsec a) : Option a :=
+def parse{α : Type} (input : String) (parser : Parsec α) : Option α :=
   let initialState : State := { input := input, indent := initialIndentationState }
   match parser.run initialState with
   | Consumed.Consumed (Reply.Ok res _) => some res
   | Consumed.Empty (Reply.Ok res _) => some res
   | _ => none
+
+def backtrack{α : Type}(p : Parsec α) : Parsec α :=
+  Parsec.mk (λ s => match p.run s with
+                    | Consumed.Consumed (Reply.Ok res s') => Consumed.Consumed (Reply.Ok res s')
+                    | Consumed.Consumed (Reply.Error err) => Consumed.Empty (Reply.Error err)
+                    | Consumed.Empty (Reply.Ok res s') => Consumed.Empty (Reply.Ok res s')
+                    | Consumed.Empty (Reply.Error err) => Consumed.Empty (Reply.Error err)
+                    )
+
+/-- Left-biased or-combinator which doesn't backtrack -/
+def or {α: Type}(p₁ p₂ : Parsec α): Parsec α :=
+  Parsec.mk (λ s => match p₁.run s with
+                    | Consumed.Consumed (Reply.Ok res s') => Consumed.Consumed (Reply.Ok res s')
+                    | Consumed.Consumed (Reply.Error err) => Consumed.Consumed (Reply.Error err)
+                    | Consumed.Empty (Reply.Ok res s') => Consumed.Empty (Reply.Ok res s')
+                    | Consumed.Empty (Reply.Error _) => p₂.run s
+  )
 
 
 def aab_parser : Parsec Unit := do
@@ -97,8 +114,12 @@ def aab_parser : Parsec Unit := do
   charP 'a'
   charP 'b'
 
+def a_or_b_parser : Parsec Unit := or (backtrack (charP 'a')) (charP 'b')
+
 #guard parse "" (charP 'a') == none
 #guard parse "a" (charP 'a') == some Unit.unit
 #guard parse "b" (charP 'a') == none
 #guard parse "aab" aab_parser == some Unit.unit
 #guard parse "bba" aab_parser == none
+#guard parse "a" a_or_b_parser == some Unit.unit
+#guard parse "b" a_or_b_parser == some Unit.unit
