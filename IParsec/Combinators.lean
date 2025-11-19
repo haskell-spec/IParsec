@@ -61,6 +61,10 @@ def or {tok α: Type}(p₁ p₂ : Parsec tok α): Parsec tok α :=
                     | Consumed.Empty (Reply.Error _) => p₂.run s
   )
 
+/--
+Left-biased or-combinator which doesn't backtrack.
+A generalization of the `or` combinator.
+-/
 def ors{tok α : Type}(ps : List (Parsec tok α)) : Parsec tok α :=
   List.foldr or fail ps
 

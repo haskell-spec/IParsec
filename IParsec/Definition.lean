@@ -26,23 +26,45 @@ structure State(tok : Type) : Type  where
   input : List (Located tok)
   indent : IndentationState
 
+/--
+Indicates whether the parser has consumed input while producing its result.
+`Empty` means that no input has been consumed.
+-/
 inductive Consumed (α : Type) : Type where
   | Consumed : α → Consumed α
   | Empty : α → Consumed α
 
+/--
+Possible Outputs of the parser.
+-/
 inductive Reply (tok α : Type) : Type where
   | Ok : α → State tok → Reply tok α
   | Error : ParseError → Reply tok α
 
+/--
+A parser takes a parser state and produces a result.
+-/
 structure Parsec (tok α : Type) : Type where
-  run : (State tok → Consumed (Reply tok α))
+  run : State tok → Consumed (Reply tok α)
 
 /--
 Modify the state the parser is run in.
 -/
-def modifyState {tok α : Type}(f : State tok → State tok)(p : Parsec tok α) : Parsec tok α :=
+def modifyState {tok α : Type}
+                (f : State tok → State tok)
+                (p : Parsec tok α)
+                : Parsec tok α :=
   Parsec.mk (λ s => p.run (f s))
 
+/--
+The unit of the `Parsec` monad.
+-/
+def parsec_pure {tok α : Type}(x : α) : Parsec tok α :=
+  Parsec.mk (λ s => Consumed.Empty (Reply.Ok x s))
+
+/--
+The bind operations of the `Parsec` monad.
+-/
 def parsec_bind {tok α β : Type} :
    Parsec tok α →
    (α -> Parsec tok β) →
@@ -57,13 +79,15 @@ def parsec_bind {tok α β : Type} :
      )
 
 instance parsecMonad {tok : Type} : Monad (Parsec tok) where
-  pure := λ x => Parsec.mk (λ s => Consumed.Empty (Reply.Ok x s))
+  pure := parsec_pure
   bind := parsec_bind
 
 
-
-def parse{α : Type} (input : String) (parser : Parsec Char α) : Option α :=
-  let initialState : State Char := { input := input.toList.map (λ x => ⟨0,x⟩), indent := initialIndentationState }
+def parse {tok α : Type}
+          (input : List (Located tok))
+          (parser : Parsec tok α)
+          : Option α :=
+  let initialState : State tok := { input := input, indent := initialIndentationState }
   match parser.run initialState with
   | Consumed.Consumed (Reply.Ok res _) => some res
   | Consumed.Empty (Reply.Ok res _) => some res
