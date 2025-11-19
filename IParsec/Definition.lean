@@ -57,6 +57,12 @@ def modifyState {tok α : Type}
   Parsec.mk (λ s => p.run (f s))
 
 /--
+Get the state the parser is run in.
+-/
+def getState {tok : Type} : Parsec tok (State tok) :=
+  Parsec.mk (λ s => Consumed.Empty (Reply.Ok s s))
+
+/--
 The unit of the `Parsec` monad.
 -/
 def parsec_pure {tok α : Type}(x : α) : Parsec tok α :=
