@@ -41,15 +41,39 @@ def localTokenMode {tok α : Type}
   modifyState (λ ⟨input, indents⟩ => State.mk input {indents with  rel := rel }) p
 
 /--
-Parse a single token.
+Pop the next token from the input.
+This consumes the token and returns an error if the input is empty.
 -/
-def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit :=
+def pop { tok : Type} : Parsec tok (Veriflex.Located tok) :=
   Parsec.mk (λ s => match s.input with
                     | List.nil => Consumed.Empty (Reply.Error "Input is empty")
-                    | List.cons x xs => if x.content == c
-                                        then Consumed.Consumed (Reply.Ok Unit.unit ⟨xs, s.indent⟩)
-                                        else Consumed.Consumed (Reply.Error "Character doesn't match")
-                    )
+                    | List.cons x xs => Consumed.Consumed (Reply.Ok x ⟨xs, s.indent⟩)
+            )
+
+/--
+Peek at the next token from the input.
+This doesn't consume the token and returns an error if the input is empty.
+-/
+def peek { tok : Type} : Parsec tok (Veriflex.Located tok) :=
+  Parsec.mk (λ s => match s.input with
+                    | List.nil => Consumed.Empty (Reply.Error "Input is empty")
+                    | List.cons x xs => Consumed.Empty (Reply.Ok x ⟨x :: xs, s.indent⟩)
+            )
+
+/--
+Asserts that the property `p` holds and throws the given error otherwise.
+-/
+def assert {tok : Type} (p : Bool)(err : ParseError) : Parsec tok Unit :=
+  Parsec.mk (λ s => if p
+                    then Consumed.Empty (Reply.Ok Unit.unit s)
+                    else Consumed.Empty (Reply.Error err))
+
+/--
+Parse a single token.
+-/
+def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
+  let tok ← pop
+  assert (tok.content == c) "Character doesn't match"
 
 /--
 Parses and returns a single token if it satisfies the given predicate.
