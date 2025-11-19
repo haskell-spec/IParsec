@@ -23,3 +23,38 @@ def a_or_b_parser : Parsec Char Unit := or (backtrack (tokenP 'a')) (tokenP 'b')
 #guard parse_string "aa" (many (tokenP 'a')) == some [Unit.unit, Unit.unit]
 #guard parse_string "" (many1 (tokenP 'a')) == none
 #guard parse_string "aa" (many1 (tokenP 'a')) == some [Unit.unit, Unit.unit]
+
+/-- Tokens for the D² Dyck language -/
+inductive Token : Type where
+  | LParen : Token
+  | RParen : Token
+  | LBracket : Token
+  | RBracket : Token
+  deriving BEq
+
+/-
+The example from the paper:
+A → ( `(` ; A> ; `)`  <|> `[`≥ ; A> ; `]`≥ )
+
+- Matching parantheses must align vertically
+- Things enclosed in parantheses must be aligned more to the right.
+- Things enclosed in square brackets must be more indented than the surrounding code.
+-
+-/
+mutual
+  def parse_paren : Parsec Token Unit := do
+    tokenP Token.LParen
+    tokenP Token.RParen
+
+  def parse_bracket : Parsec Token Unit := do
+    tokenP Token.LBracket
+    tokenP Token.RBracket
+
+  def parse_exp : Parsec Token Unit := do
+    _ <- many (or parse_paren parse_bracket)
+    return Unit.unit
+end
+
+
+#guard parse [] parse_exp == some Unit.unit
+#guard parse [⟨0,Token.LParen⟩,⟨0,Token.RParen⟩] parse_exp == some Unit.unit
