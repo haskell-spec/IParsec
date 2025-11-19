@@ -28,9 +28,6 @@ def absoluteIndentation {tok α : Type}
   modifyState setAbsoluteIndentation p
 
 
-
-
-
 /--
 Sets the default indentation mode that is applied to all tokens to the given indentation relation.
 -/
@@ -68,12 +65,18 @@ def assert {tok : Type} (p : Bool)(err : ParseError) : Parsec tok Unit :=
                     then Consumed.Empty (Reply.Ok Unit.unit s)
                     else Consumed.Empty (Reply.Error err))
 
+def check_valid_indent (_s : IndentationState)
+                       (_i : Indentation) : Bool :=
+                       true
+
 /--
 Parse a single token.
 -/
 def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
   let tok ← pop
+  let s ← getState
   assert (tok.content == c) "Character doesn't match"
+  assert (check_valid_indent s.indent tok.location) "Indentation is wrong"
 
 /--
 Parses and returns a single token if it satisfies the given predicate.
