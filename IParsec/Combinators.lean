@@ -4,17 +4,40 @@ import IParsec.Definition
 Sets the indentation relation for the next token.
 Corresponds to `p^rel` in the paper.
 -/
-def localIndentation {tok α : Type}(rel : IndentationRel)(p : Parsec tok α) : Parsec tok α := sorry
+def localIndentation {tok α : Type}
+                     (rel : IndentationRel)
+                     (p : Parsec tok α)
+                     : Parsec tok α := sorry
+
+
+def setAbsoluteIndentation {tok : Type}(s : State tok) : State tok :=
+  let indent := s.indent
+  { input := s.input
+    indent := { min := indent.min
+                max := indent.max
+                absMode := true
+                rel := indent.rel}
+  }
 
 /--
 Corresponds to `|p|` in the paper.
 -/
-def absoluteIndentation {tok α : Type}(p : Parsec tok α) : Parsec tok α := sorry
+def absoluteIndentation {tok α : Type}
+                        (p : Parsec tok α)
+                        : Parsec tok α :=
+  modifyState setAbsoluteIndentation p
+
+
+
+
 
 /--
 Sets the default indentation mode that is applied to all tokens to the given indentation relation.
 -/
-def localTokenMode {tok α : Type}(rel : IndentationRel)(p : Parsec tok α) : Parsec tok α :=
+def localTokenMode {tok α : Type}
+                   (rel : IndentationRel)
+                   (p : Parsec tok α)
+                   : Parsec tok α :=
   modifyState (λ ⟨input, indents⟩ => State.mk input {indents with  rel := rel }) p
 
 /--
