@@ -44,7 +44,7 @@ A → ( `(` ; A> ; `)`  <|> `[`≥ ; A> ; `]`≥ )
 mutual
   def parse_paren : Parsec Token Unit := do
     tokenP Token.LParen
-    tokenP Token.RParen
+    (localIndentation IndentationRel.Any (tokenP Token.RParen))
 
   def parse_bracket : Parsec Token Unit := do
     tokenP Token.LBracket
@@ -55,6 +55,6 @@ mutual
     return Unit.unit
 end
 
-
+#guard parse [⟨0,Token.LParen⟩,⟨1,Token.RParen⟩] parse_paren == some Unit.unit
 #guard parse [] parse_exp == some Unit.unit
 #guard parse [⟨0,Token.LParen⟩,⟨0,Token.RParen⟩] parse_exp == some Unit.unit
