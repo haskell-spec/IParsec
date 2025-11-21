@@ -83,9 +83,12 @@ def assert {tok : Type} (p : Bool)(err : ParseError) : Parsec tok Unit :=
                     then Consumed.Empty (Reply.Ok Unit.unit s)
                     else Consumed.Empty (Reply.Error err))
 
-def check_valid_indent (_s : IndentationState)
-                       (_i : Indentation) : Bool :=
-                       true
+def check_valid_indent (s : IndentationState)
+                       (i : Indentation) : Bool :=
+  match s.set with
+  | IndentationSet.Any => true
+  | IndentationSet.Exact i' => i = i'
+  | IndentationSet.Min i' => i' ≤ i
 
 /--
 Parse a single token.
@@ -95,6 +98,8 @@ def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
   let s ← getState
   assert (tok.content == c) "Character doesn't match"
   assert (check_valid_indent s.indent tok.location) "Indentation is wrong"
+  let new_indent := {s.indent with set := IndentationSet.Exact tok.location}
+  putState { s with indent := new_indent }
 
 /--
 Parses and returns a single token if it satisfies the given predicate.
