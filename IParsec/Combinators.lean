@@ -1,5 +1,22 @@
 import IParsec.Definition
 
+
+def new_indentation_set (s : IndentationState) (r : IndentationRel) : IndentationState :=
+  match s.set with
+  | IndentationSet.Any => {s with set := IndentationSet.Any }
+  | IndentationSet.Exact i =>
+    match r with
+    | IndentationRel.Any => {s with set := IndentationSet.Any}
+    | IndentationRel.Eq => {s with set := IndentationSet.Exact i}
+    | IndentationRel.Ge => {s with set := IndentationSet.Min i}
+    | IndentationRel.Gt => {s with set := IndentationSet.Min (i + 1)}
+  | IndentationSet.Min i =>
+    match r with
+    | IndentationRel.Any => {s with set := IndentationSet.Any}
+    | IndentationRel.Eq => {s with set := IndentationSet.Min i}
+    | IndentationRel.Ge => {s with set := IndentationSet.Min i}
+    | IndentationRel.Gt => {s with set := IndentationSet.Min (i + 1)}
+
 /--
 Sets the indentation relation for the next token.
 Corresponds to `p^rel` in the paper.
@@ -7,16 +24,17 @@ Corresponds to `p^rel` in the paper.
 def localIndentation {tok α : Type}
                      (rel : IndentationRel)
                      (p : Parsec tok α)
-                     : Parsec tok α := sorry
+                     : Parsec tok α := do
+    let s ← getState
+    let new := new_indentation_set s.indent rel
+    putState { s with indent := new }
+    p
 
 
 def setAbsoluteIndentation {tok : Type}(s : State tok) : State tok :=
   let indent := s.indent
   { input := s.input
-    indent := { min := indent.min
-                max := indent.max
-                absMode := true
-                rel := indent.rel}
+    indent := { indent with absMode := true }
   }
 
 /--

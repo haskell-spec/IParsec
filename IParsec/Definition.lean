@@ -11,16 +11,24 @@ def ParseError : Type := String
 
 abbrev Indentation : Type := Nat
 
-def maxInd : Indentation := 1000
+inductive IndentationSet where
+  | Any : IndentationSet
+  | Exact : Indentation → IndentationSet
+  | Min : Indentation → IndentationSet
+
+def isValidIndent (s : IndentationSet) (i : Indentation) : Bool :=
+  match s with
+  | IndentationSet.Any => true
+  | IndentationSet.Exact e => i = e
+  | IndentationSet.Min e => e ≤ i
 
 structure IndentationState : Type where
-  min : Indentation
-  max : Indentation
+  set : IndentationSet
   absMode : Bool
-  rel : IndentationRel
+  rel : Option IndentationRel
 
 def initialIndentationState : IndentationState :=
-  { min := 0, max := maxInd, absMode := False, rel := IndentationRel.Any}
+  { set := IndentationSet.Any, absMode := False, rel := none}
 
 structure State(tok : Type) : Type  where
   input : List (Located tok)
@@ -55,6 +63,9 @@ def modifyState {tok α : Type}
                 (p : Parsec tok α)
                 : Parsec tok α :=
   Parsec.mk (λ s => p.run (f s))
+
+def putState : State tok → Parsec tok Unit :=
+  λ s => Parsec.mk (λ _ => Consumed.Empty (Reply.Ok Unit.unit s))
 
 /--
 Get the state the parser is run in.
