@@ -1,6 +1,5 @@
 import IParsec.Definition
 
-
 def new_indentation_set (s : IndentationState) (r : IndentationRel) : IndentationState :=
   match s.set with
   | IndentationSet.Any => {s with set := IndentationSet.Any }
@@ -60,28 +59,26 @@ Pop the next token from the input.
 This consumes the token and returns an error if the input is empty.
 -/
 def pop { tok : Type} : Parsec tok (Veriflex.Located tok) :=
-  Parsec.mk (λ s => match s.input with
-                    | List.nil => Consumed.Empty (Reply.Error "Input is empty")
-                    | List.cons x xs => Consumed.Consumed (Reply.Ok x ⟨xs, s.indent⟩)
-            )
+  λ s => match s.input with
+          | List.nil => Consumed.Empty (Reply.Error "Input is empty")
+          | List.cons x xs => Consumed.Consumed (Reply.Ok x ⟨xs, s.indent⟩)
 
 /--
 Peek at the next token from the input.
 This doesn't consume the token and returns an error if the input is empty.
 -/
 def peek { tok : Type} : Parsec tok (Veriflex.Located tok) :=
-  Parsec.mk (λ s => match s.input with
-                    | List.nil => Consumed.Empty (Reply.Error "Input is empty")
-                    | List.cons x xs => Consumed.Empty (Reply.Ok x ⟨x :: xs, s.indent⟩)
-            )
+  λ s => match s.input with
+          | List.nil => Consumed.Empty (Reply.Error "Input is empty")
+          | List.cons x xs => Consumed.Empty (Reply.Ok x ⟨x :: xs, s.indent⟩)
 
 /--
 Asserts that the property `p` holds and throws the given error otherwise.
 -/
 def assert {tok : Type} (p : Bool)(err : ParseError) : Parsec tok Unit :=
-  Parsec.mk (λ s => if p
-                    then Consumed.Empty (Reply.Ok Unit.unit s)
-                    else Consumed.Empty (Reply.Error err))
+  λ s => if p
+         then Consumed.Empty (Reply.Ok Unit.unit s)
+         else Consumed.Empty (Reply.Error err)
 
 def check_valid_indent (s : IndentationState)
                        (i : Indentation) : Bool :=
@@ -105,34 +102,33 @@ def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
 Parses and returns a single token if it satisfies the given predicate.
 -/
 def satisfyP{tok : Type}(p : tok → Bool) : Parsec tok tok :=
-  Parsec.mk (λ s => match s.input with
-                    | List.nil => Consumed.Empty (Reply.Error "Input is empty")
-                    | List.cons x xs => if p x.content
-                                        then Consumed.Consumed (Reply.Ok x.content ⟨xs, s.indent⟩)
-                                        else Consumed.Consumed (Reply.Error "Token does not satisfy predicate."))
+  λ s => match s.input with
+         | List.nil => Consumed.Empty (Reply.Error "Input is empty")
+         | List.cons x xs => if p x.content
+                             then Consumed.Consumed (Reply.Ok x.content ⟨xs, s.indent⟩)
+                             else Consumed.Consumed (Reply.Error "Token does not satisfy predicate.")
 
 def backtrack{tok α : Type}(p : Parsec tok α) : Parsec tok α :=
-  Parsec.mk (λ s => match p.run s with
-                    | Consumed.Consumed (Reply.Ok res s') => Consumed.Consumed (Reply.Ok res s')
-                    | Consumed.Consumed (Reply.Error err) => Consumed.Empty (Reply.Error err)
-                    | Consumed.Empty (Reply.Ok res s') => Consumed.Empty (Reply.Ok res s')
-                    | Consumed.Empty (Reply.Error err) => Consumed.Empty (Reply.Error err)
-                    )
+  λ s => match p s with
+        | Consumed.Consumed (Reply.Ok res s') => Consumed.Consumed (Reply.Ok res s')
+        | Consumed.Consumed (Reply.Error err) => Consumed.Empty (Reply.Error err)
+        | Consumed.Empty (Reply.Ok res s') => Consumed.Empty (Reply.Ok res s')
+        | Consumed.Empty (Reply.Error err) => Consumed.Empty (Reply.Error err)
 
 /--
 A parser that immediately fails without consuming any input.
 -/
 def fail {tok α : Type} : Parsec tok α :=
-  Parsec.mk (λ _ => Consumed.Empty (Reply.Error "fail"))
+  λ _ => Consumed.Empty (Reply.Error "fail")
 
 /-- Left-biased or-combinator which doesn't backtrack -/
 def or {tok α: Type}(p₁ p₂ : Parsec tok α): Parsec tok α :=
-  Parsec.mk (λ s => match p₁.run s with
-                    | Consumed.Consumed (Reply.Ok res s') => Consumed.Consumed (Reply.Ok res s')
-                    | Consumed.Consumed (Reply.Error err) => Consumed.Consumed (Reply.Error err)
-                    | Consumed.Empty (Reply.Ok res s') => Consumed.Empty (Reply.Ok res s')
-                    | Consumed.Empty (Reply.Error _) => p₂.run s
-  )
+  λ s => match p₁ s with
+          | Consumed.Consumed (Reply.Ok res s') => Consumed.Consumed (Reply.Ok res s')
+          | Consumed.Consumed (Reply.Error err) => Consumed.Consumed (Reply.Error err)
+          | Consumed.Empty (Reply.Ok res s') => Consumed.Empty (Reply.Ok res s')
+          | Consumed.Empty (Reply.Error _) => p₂ s
+
 
 /--
 Left-biased or-combinator which doesn't backtrack.

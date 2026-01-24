@@ -52,8 +52,7 @@ inductive Reply (tok α : Type) : Type where
 /--
 A parser takes a parser state and produces a result.
 -/
-structure Parsec (tok α : Type) : Type where
-  run : State tok → Consumed (Reply tok α)
+def Parsec (tok α : Type) : Type :=  State tok → Consumed (Reply tok α)
 
 /--
 Modify the state the parser is run in.
@@ -62,22 +61,22 @@ def modifyState {tok α : Type}
                 (f : State tok → State tok)
                 (p : Parsec tok α)
                 : Parsec tok α :=
-  Parsec.mk (λ s => p.run (f s))
+  λ s => p (f s)
 
 def putState : State tok → Parsec tok Unit :=
-  λ s => Parsec.mk (λ _ => Consumed.Empty (Reply.Ok Unit.unit s))
+  λ s => λ _ => Consumed.Empty (Reply.Ok Unit.unit s)
 
 /--
 Get the state the parser is run in.
 -/
 def getState {tok : Type} : Parsec tok (State tok) :=
-  Parsec.mk (λ s => Consumed.Empty (Reply.Ok s s))
+  λ s => Consumed.Empty (Reply.Ok s s)
 
 /--
 The unit of the `Parsec` monad.
 -/
 def parsec_pure {tok α : Type}(x : α) : Parsec tok α :=
-  Parsec.mk (λ s => Consumed.Empty (Reply.Ok x s))
+  λ s => Consumed.Empty (Reply.Ok x s)
 
 /--
 The bind operations of the `Parsec` monad.
@@ -87,13 +86,12 @@ def parsec_bind {tok α β : Type} :
    (α -> Parsec tok β) →
    Parsec tok β :=
    open Reply in
-   λ ma f => Parsec.mk (λ s =>
-     match ma.run s with
-     | Consumed.Consumed (Ok a s') => (f a).run s'
+   λ ma f s =>
+     match ma s with
+     | Consumed.Consumed (Ok a s') => f a s'
      | Consumed.Consumed (Error err) => (Consumed.Consumed (Error err))
-     | Consumed.Empty (Ok a s') => (f a).run s'
+     | Consumed.Empty (Ok a s') => f a s'
      | Consumed.Empty (Error err) => Consumed.Empty (Error err)
-     )
 
 instance parsecMonad {tok : Type} : Monad (Parsec tok) where
   pure := parsec_pure
@@ -105,7 +103,7 @@ def parse {tok α : Type}
           (parser : Parsec tok α)
           : Option α :=
   let initialState : State tok := { input := input, indent := initialIndentationState }
-  match parser.run initialState with
+  match parser initialState with
   | Consumed.Consumed (Reply.Ok res _) => some res
   | Consumed.Empty (Reply.Ok res _) => some res
   | _ => none
