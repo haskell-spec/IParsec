@@ -101,12 +101,13 @@ def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
 /--
 Parses and returns a single token if it satisfies the given predicate.
 -/
-def satisfyP{tok : Type}(p : tok → Bool) : Parsec tok tok :=
+def satisfyP{tok α : Type}(p : tok → Option α) : Parsec tok α :=
   λ s => match s.input with
          | List.nil => Consumed.Empty (Reply.Error "Input is empty")
-         | List.cons x xs => if p x.content
-                             then Consumed.Consumed (Reply.Ok x.content ⟨xs, s.indent⟩)
-                             else Consumed.Consumed (Reply.Error "Token does not satisfy predicate.")
+         | List.cons x xs =>
+             match p x.content with
+             | none => Consumed.Consumed (Reply.Error "Token does not satisfy predicate.")
+             | some c => Consumed.Consumed (Reply.Ok c ⟨xs, s.indent⟩)
 
 def backtrack{tok α : Type}(p : Parsec tok α) : Parsec tok α :=
   λ s => match p s with
