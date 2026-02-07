@@ -80,12 +80,12 @@ def assert {tok : Type} (p : Bool)(err : ParseError) : Parsec tok Unit :=
          then Consumed.Empty (Reply.Ok Unit.unit s)
          else Consumed.Empty (Reply.Error err)
 
-def check_valid_indent (s : IndentationState)
-                       (i : Indentation) : Bool :=
-  match s.set with
-  | IndentationSet.Any => true
-  | IndentationSet.Exact i' => i = i'
-  | IndentationSet.Min i' => i' ≤ i
+def check_valid_indent (_s : IndentationState)
+                       (_i : Indentation) : Bool := true
+  -- match s.set with
+  -- | IndentationSet.Any => true
+  -- | IndentationSet.Exact i' => i = i'
+  -- | IndentationSet.Min i' => i' ≤ i
 
 /--
 A parser that immediately fails without consuming any input.

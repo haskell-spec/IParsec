@@ -16,11 +16,6 @@ inductive IndentationSet where
   | Exact : Indentation → IndentationSet
   | Min : Indentation → IndentationSet
 
-def isValidIndent (_s : IndentationSet) (_i : Indentation) : Bool := true
-  -- match s with
-  -- | IndentationSet.Any => true
-  -- | IndentationSet.Exact e => i = e
-  -- | IndentationSet.Min e => e ≤ i
 
 structure IndentationState : Type where
   set : IndentationSet
