@@ -3,7 +3,9 @@ import IParsec.Combinators
 
 def parse_string{α : Type} (input : String) (parser : Parsec Char α) : Option α :=
   let input := input.toList.map (λ x => ⟨0,x⟩)
-  parse input  parser
+  match parse input  parser with
+  | Sum.inl _err => none
+  | Sum.inr res => some res
 
 def aab_parser : Parsec Char Unit := do
   tokenP 'a'
@@ -55,6 +57,6 @@ mutual
     return Unit.unit
 end
 
-#guard parse [⟨0,Token.LParen⟩,⟨1,Token.RParen⟩] parse_paren == some Unit.unit
-#guard parse [] parse_exp == some Unit.unit
-#guard parse [⟨0,Token.LParen⟩,⟨0,Token.RParen⟩] parse_exp == some Unit.unit
+#guard parse [⟨0,Token.LParen⟩,⟨1,Token.RParen⟩] parse_paren == Sum.inr Unit.unit
+#guard parse [] parse_exp == Sum.inr Unit.unit
+#guard parse [⟨0,Token.LParen⟩,⟨0,Token.RParen⟩] parse_exp == Sum.inr Unit.unit

@@ -96,9 +96,10 @@ instance parsecMonad {tok : Type} : Monad (Parsec tok) where
 def parse {tok α : Type}
           (input : List (Located tok))
           (parser : Parsec tok α)
-          : Option α :=
+          : String ⊕ α :=
   let initialState : State tok := { input := input, indent := initialIndentationState }
   match parser initialState with
-  | Consumed.Consumed (Reply.Ok res _) => some res
-  | Consumed.Empty (Reply.Ok res _) => some res
-  | _ => none
+  | Consumed.Consumed (Reply.Ok res _) => Sum.inr res
+  | Consumed.Empty (Reply.Ok res _) => Sum.inr res
+  | Consumed.Consumed (Reply.Error err) => Sum.inl err
+  | Consumed.Empty (Reply.Error err) => Sum.inl err
