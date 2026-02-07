@@ -88,6 +88,12 @@ def check_valid_indent (s : IndentationState)
   | IndentationSet.Min i' => i' ≤ i
 
 /--
+A parser that immediately fails without consuming any input.
+-/
+def fail {tok α : Type} : Parsec tok α :=
+  λ _ => Consumed.Empty (Reply.Error "fail")
+
+/--
 Parse a single token.
 -/
 def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
@@ -101,13 +107,15 @@ def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
 /--
 Parses and returns a single token if it satisfies the given predicate.
 -/
-def satisfyP{tok α : Type}(p : tok → Option α) : Parsec tok α :=
-  λ s => match s.input with
-         | List.nil => Consumed.Empty (Reply.Error "Input is empty")
-         | List.cons x xs =>
-             match p x.content with
-             | none => Consumed.Consumed (Reply.Error "Token does not satisfy predicate.")
-             | some c => Consumed.Consumed (Reply.Ok c ⟨xs, s.indent⟩)
+def satisfyP{tok α : Type}(p : tok → Option α) : Parsec tok α := do
+  let tok ← pop
+  let s ← getState
+  let new_indent := {s.indent with set := IndentationSet.Exact tok.location}
+  putState { s with indent := new_indent }
+  match p tok.content with
+  | none => λ _ => Consumed.Consumed (Reply.Error "satisfyP: Predicate not satisfied")
+  | some r => pure r
+
 
 def backtrack{tok α : Type}(p : Parsec tok α) : Parsec tok α :=
   λ s => match p s with
@@ -116,11 +124,7 @@ def backtrack{tok α : Type}(p : Parsec tok α) : Parsec tok α :=
         | Consumed.Empty (Reply.Ok res s') => Consumed.Empty (Reply.Ok res s')
         | Consumed.Empty (Reply.Error err) => Consumed.Empty (Reply.Error err)
 
-/--
-A parser that immediately fails without consuming any input.
--/
-def fail {tok α : Type} : Parsec tok α :=
-  λ _ => Consumed.Empty (Reply.Error "fail")
+
 
 /-- Left-biased or-combinator which doesn't backtrack -/
 def or {tok α: Type}(p₁ p₂ : Parsec tok α): Parsec tok α :=
