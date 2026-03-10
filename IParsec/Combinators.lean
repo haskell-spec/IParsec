@@ -107,13 +107,13 @@ def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
 /--
 Parses and returns a single token if it satisfies the given predicate.
 -/
-def satisfyP{tok α : Type}(p : tok → Option α) : Parsec tok α := do
+def satisfyP{tok α : Type}[Repr tok](p : tok → Option α)(desc : String) : Parsec tok α := do
   let tok ← pop
   let s ← getState
   let new_indent := {s.indent with set := IndentationSet.Exact tok.location}
   putState { s with indent := new_indent }
   match p tok.content with
-  | none => λ _ => Consumed.Consumed (Reply.Error "satisfyP: Predicate not satisfied")
+  | none => λ _ => Consumed.Consumed (Reply.Error ("satisfyP: Predicate " ++ desc ++ " not satisfied for token " ++ reprStr tok.content))
   | some r => pure r
 
 
