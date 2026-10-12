@@ -75,7 +75,7 @@ def peek { tok : Type} : Parsec tok (Veriflex.Located tok) :=
 /--
 Asserts that the property `p` holds and throws the given error otherwise.
 -/
-def assert {tok : Type} (p : Bool)(err : ParseError) : Parsec tok Unit :=
+def assert_prop {tok : Type} (p : Bool)(err : ParseError) : Parsec tok Unit :=
   λ s => if p
          then Consumed.Empty (Reply.Ok Unit.unit s)
          else Consumed.Empty (Reply.Error err)
@@ -99,8 +99,8 @@ Parse a single token.
 def tokenP{tok : Type}[BEq tok](c : tok) : Parsec tok Unit := do
   let tok ← pop
   let s ← getState
-  assert (tok.content == c) "Character doesn't match"
-  assert (check_valid_indent s.indent tok.location) "Indentation is wrong"
+  assert_prop (tok.content == c) "Character doesn't match"
+  assert_prop (check_valid_indent s.indent tok.location) "Indentation is wrong"
   let new_indent := {s.indent with set := IndentationSet.Exact tok.location}
   putState { s with indent := new_indent }
 
